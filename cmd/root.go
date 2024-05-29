@@ -11,7 +11,7 @@ var rootCmd = &cobra.Command{
 	Use:   "ssh",
 	Short: "SSH into cluster nodes",
 	Args:  cobra.ExactArgs(1),
-	Long:  `A kubectl plugin for login securely to cluster nodes via SSH. Both public key authentication and password authentication are supported`,
+	Long:  `A kubectl plugin for securely login to cluster nodes via SSH. Both public key authentication and password authentication are supported`,
 
 	Run: func(cmd *cobra.Command, args []string) {
 		user, e := cmd.Flags().GetString("user")
