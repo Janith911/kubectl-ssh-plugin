@@ -14,38 +14,67 @@ import (
 )
 
 func configSSHClient(user string, ip string, pvtkey string) ssh.ClientConfig {
-	key, _ := os.ReadFile(pvtkey)
-	signer, _ := ssh.ParsePrivateKey(key)
-
-	config := ssh.ClientConfig{
-		User: user,
-		Auth: []ssh.AuthMethod{
-			ssh.PublicKeys(signer),
-			ssh.PasswordCallback(func() (secret string, err error) {
-				fmt.Print(user + "@" + ip + ":" + "'s password:")
-				originalState, _ := term.GetState(int(os.Stdin.Fd()))
-				defer term.Restore(int(os.Stdin.Fd()), originalState)
-				sigch := make(chan os.Signal, 1)
-				signal.Notify(sigch, os.Interrupt)
-				go func() {
-					for _ = range sigch {
-						term.Restore(int(os.Stdin.Fd()), originalState)
-						os.Exit(1)
+	_, err := os.Stat(pvtkey)
+	if err != nil {
+		config := ssh.ClientConfig{
+			User: user,
+			Auth: []ssh.AuthMethod{
+				ssh.PasswordCallback(func() (secret string, err error) {
+					fmt.Print(user + "@" + ip + ":" + "'s password:")
+					originalState, _ := term.GetState(int(os.Stdin.Fd()))
+					defer term.Restore(int(os.Stdin.Fd()), originalState)
+					sigch := make(chan os.Signal, 1)
+					signal.Notify(sigch, os.Interrupt)
+					go func() {
+						for _ = range sigch {
+							term.Restore(int(os.Stdin.Fd()), originalState)
+							os.Exit(1)
+						}
+					}()
+					bs, e := term.ReadPassword(int(os.Stdin.Fd()))
+					fmt.Println("")
+					if e != nil {
+						fmt.Println(e)
 					}
-				}()
-				bs, e := term.ReadPassword(int(os.Stdin.Fd()))
-				fmt.Println("")
-				if e != nil {
-					fmt.Println(e)
-				}
-				return string(bs), nil
-			}),
-		},
-		HostKeyCallback: ssh.InsecureIgnoreHostKey(),
+					return string(bs), nil
+				}),
+			},
+			HostKeyCallback: ssh.InsecureIgnoreHostKey(),
+		}
+
+		return config
+
+	} else {
+		key, _ := os.ReadFile(pvtkey)
+		signer, _ := ssh.ParsePrivateKey(key)
+		config := ssh.ClientConfig{
+			User: user,
+			Auth: []ssh.AuthMethod{
+				ssh.PublicKeys(signer),
+				ssh.PasswordCallback(func() (secret string, err error) {
+					fmt.Print(user + "@" + ip + ":" + "'s password:")
+					originalState, _ := term.GetState(int(os.Stdin.Fd()))
+					defer term.Restore(int(os.Stdin.Fd()), originalState)
+					sigch := make(chan os.Signal, 1)
+					signal.Notify(sigch, os.Interrupt)
+					go func() {
+						for _ = range sigch {
+							term.Restore(int(os.Stdin.Fd()), originalState)
+							os.Exit(1)
+						}
+					}()
+					bs, e := term.ReadPassword(int(os.Stdin.Fd()))
+					fmt.Println("")
+					if e != nil {
+						fmt.Println(e)
+					}
+					return string(bs), nil
+				}),
+			},
+			HostKeyCallback: ssh.InsecureIgnoreHostKey(),
+		}
+		return config
 	}
-
-	return config
-
 }
 
 func sshConnect(ip string, port string, config ssh.ClientConfig) {
